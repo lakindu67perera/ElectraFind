@@ -1,9 +1,9 @@
 
 const pool = require('../../db');
 const queries = require('./queries').default;
-console.log('this is the controller');
 
 const getUsers = (req, res) => {
+    // console.log(req);
     pool.query(queries.getUsers, (error, results) => {
         if (error) throw error;
         res.status(200).json(results.rows);
