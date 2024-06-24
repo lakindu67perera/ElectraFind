@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const pool = require("../db");
+// const queries = require("./queries");
 
 const filterObj = (obj, ...allowedFeilds)=>{
     const newObj = {};
@@ -42,19 +44,19 @@ const createSendToken = (user, statusCode, req, res) => {
 
 
 
-const signup = (req,res)=>{
-  const { name, email, password_hash, phone, role } = req.body;
-    //check if the email exist
-    pool.query(queries.checkEmailExists, [email], (error, results) => {
-        if (results.rows.length) {
-            res.send("Email already exists.");
-        }
-        pool.query(queries.addUser, [name, email, password_hash, phone, role], (error, results) => {
-            if (error) throw error;
-            res.status(201).send("User created successfully!");
-        })
-    })
-};
+// const signup = (req,res)=>{
+//   const { name, email, password_hash, phone, role } = req.body;
+//     //check if the email exist
+//     pool.query(queries.checkEmailExists, [email], (error, results) => {
+//         if (results.rows.length) {
+//             res.send("Email already exists.");
+//         }
+//         pool.query(queries.addUser, [name, email, password_hash, phone, role], (error, results) => {
+//             if (error) throw error;
+//             res.status(201).send("User created successfully!");
+//         })
+//     })
+// };
 
 const login = async(req,res)=>{
   const { email, password } = req.body;
@@ -79,7 +81,37 @@ const login = async(req,res)=>{
     res.status(500).json({ error: 'Internal server error' });
   }
 
-}
+};
+
+exports.signup = catchAsync(async (req, res, next) => {
+
+  const filteredBody = filterObj(
+    req.body,
+    "name",
+    "email",
+    "password",
+    "passwordConfirm"
+  );
+  const newUser = await User.create(filteredBody);
+  
+  const otp = `${Math.floor(Math.random() * 90000)}`;
+  const verification= await Verification.create({code:otp,user:newUser});
+  const url = `${process.env.CLIENT_ORIGIN}/verifycode/${newUser._id}/${otp}`;
+
+// send email with otp
+console.log("send email with otp",otp)
+
+
+  newUser.password = undefined;
+  res.status(201).json({
+    status: "success",
+    data: {
+      newUser,
+    },
+  });
+
+  // createSendToken(newUser, 201,req, res);
+});
 
 module.exports ={
   signup,
